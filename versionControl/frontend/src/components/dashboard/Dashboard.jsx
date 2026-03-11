@@ -3,6 +3,7 @@ import "./dashboard.css";
 import Navbar from "../Navbar";
 
 const Dashboard = () => {
+  // Initialize as empty arrays to prevent "undefined" map errors
   const [repositories, setRepositories] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestedRepositories, setSuggestedRepositories] = useState([]);
@@ -17,9 +18,11 @@ const Dashboard = () => {
           `http://localhost:3002/repo/user/${userId}`
         );
         const data = await response.json();
-        setRepositories(data.repositories);
+        // Ensure we only set an array; fallback to empty array if data.repositories is missing
+        setRepositories(data.repositories || []); 
       } catch (err) {
-        console.error("Error while fecthing repositories: ", err);
+        console.error("Error while fetching repositories: ", err);
+        setRepositories([]); 
       }
     };
 
@@ -27,22 +30,26 @@ const Dashboard = () => {
       try {
         const response = await fetch(`http://localhost:3002/repo/all`);
         const data = await response.json();
-        setSuggestedRepositories(data);
-        console.log(suggestedRepositories);
+        // Ensure data is an array before setting
+        setSuggestedRepositories(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error("Error while fecthing repositories: ", err);
+        console.error("Error while fetching suggested repositories: ", err);
+        setSuggestedRepositories([]);
       }
     };
 
-    fetchRepositories();
+    if (userId) {
+      fetchRepositories();
+    }
     fetchSuggestedRepositories();
   }, []);
 
   useEffect(() => {
-    if (searchQuery == "") {
-      setSearchResults(repositories);
+    // Check if repositories exists and is an array before filtering
+    if (searchQuery === "") {
+      setSearchResults(repositories || []);
     } else {
-      const filteredRepo = repositories.filter((repo) =>
+      const filteredRepo = (repositories || []).filter((repo) =>
         repo.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setSearchResults(filteredRepo);
@@ -55,11 +62,12 @@ const Dashboard = () => {
       <section id="dashboard">
         <aside>
           <h3>Suggested Repositories</h3>
-          {suggestedRepositories.map((repo) => {
+          {/* Added optional chaining ?. to be safe */}
+          {suggestedRepositories?.map((repo) => {
             return (
               <div key={repo._id}>
                 <h4>{repo.name}</h4>
-                <h4>{repo.description}</h4>
+                <p>{repo.description}</p>
               </div>
             );
           })}
@@ -74,27 +82,23 @@ const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {searchResults.map((repo) => {
+          {/* Added optional chaining ?. to prevent the "searchResults is undefined" error */}
+          {searchResults?.map((repo) => {
             return (
               <div key={repo._id}>
                 <h4>{repo.name}</h4>
-                <h4>{repo.description}</h4>
+                <p>{repo.description}</p>
               </div>
             );
           })}
+          {searchResults?.length === 0 && <p>No repositories found.</p>}
         </main>
         <aside>
           <h3>Upcoming Events</h3>
           <ul>
-            <li>
-              <p>Tech Conference - Dec 15</p>
-            </li>
-            <li>
-              <p>Developer Meetup - Dec 25</p>
-            </li>
-            <li>
-              <p>React Summit - Jan 5</p>
-            </li>
+            <li><p>Tech Conference - Dec 15</p></li>
+            <li><p>Developer Meetup - Dec 25</p></li>
+            <li><p>React Summit - Jan 5</p></li>
           </ul>
         </aside>
       </section>
